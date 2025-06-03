@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>롤이터 - 팀 생성기</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        .hero {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .hero h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .hero p {
+            font-size: 1.2em;
+            color: #7f8c8d;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around; /* Changed to space-around for better centering */
+            margin: 40px 0;
+        }
+        .feature {
+            flex-basis: 45%; /* Adjusted for 2 features per row or single column */
+            min-width: 250px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .feature h3 {
+            margin-top: 0;
+            color: #34495e;
+        }
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            color: #3498db;
+        }
+        .admin-actions {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+        }
+        .admin-actions h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .admin-actions .buttons {
+            display: flex;
+            flex-direction: column; /* Stack buttons vertically */
+            gap: 15px; /* Space between buttons */
+            align-items: center; /* Center buttons */
+        }
+        .admin-actions .btn {
+            width: 80%; /* Make buttons wider */
+            max-width: 300px; /* Max width for buttons */
+            padding: 12px; /* Increase padding for better touch targets */
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+<!--            <h1>리그 오브 레전드 팀 매칭 시스템</h1>-->
+<!--            <p>밸런스 있는 5:5 팀을 구성하여 내전을 진행하세요</p>-->
+
+            <h1>롤이터 - 팀 생성기</h1>
+
+            {% if user and user.user_id == 'admin' %}
+<!--                <div class="welcome-message">-->
+<!--                    <p>관리자님, 환영합니다!</p>-->
+<!--                </div>-->
+                <div class="admin-actions">
+                    <h2>관리자 메뉴</h2>
+                    <div class="buttons">
+                        <a href="/player-management" class="btn btn-primary">플레이어 관리</a>
+                        <a href="/match-maker" class="btn btn-primary">팀 매칭 및 결과 기록</a>
+                        <a href="/player-stats" class="btn btn-secondary">플레이어 통계</a>
+                        <a href="/help" class="btn btn-info">도움말</a>
+                        <a href="/logout" class="btn btn-danger">로그아웃</a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="buttons">
+                    <a href="/login" class="btn">관리자 로그인</a>
+<!--                     <a href="/help" class="btn btn-info">도움말 보기</a>-->
+                </div>
+            {% endif %}
+        </div>
+
+<!--        <div class="features">-->
+<!--            <div class="feature">-->
+<!--                <div class="feature-icon">👥</div>-->
+<!--                <h3>플레이어 관리</h3>-->
+<!--                <p>선수들의 실력 정보를 기록하고 관리하세요.</p>-->
+<!--            </div>-->
+<!--            <div class="feature">-->
+<!--                <div class="feature-icon">⚖️</div>-->
+<!--                <h3>밸런스 매칭</h3>-->
+<!--                <p>티어와 포지션을 고려한 가장 균형 잡힌 팀 구성 및 경기 결과 기록.</p>-->
+<!--            </div>-->
+<!--             <div class="feature">-->
+<!--                <div class="feature-icon">📊</div>-->
+<!--                <h3>전적 통계</h3>-->
+<!--                <p>플레이어들의 매치 점수, 승률 등 통계를 확인하세요.</p>-->
+<!--            </div>-->
+<!--        </div>-->
+    </div>
+</body>
+</html>

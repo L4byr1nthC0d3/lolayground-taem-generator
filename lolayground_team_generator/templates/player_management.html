@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>플레이어 관리</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        .player-management { margin-top: 20px; }
+        .player-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .player-table th, .player-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .player-table th { background-color: #f2f2f2; font-weight: bold; }
+        .player-table tr:hover { background-color: #f5f5f5; }
+        .player-actions { display: flex; gap: 10px; }
+        .player-actions button { background: none; border: none; cursor: pointer; color: #3498db; padding: 5px; }
+        .player-actions button:hover { text-decoration: underline; }
+        .player-actions .delete-btn { color: #e74c3c; }
+        .player-position, .player-tier { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; text-align: center; }
+        .player-position { color: white; }
+        .position-TOP { background-color: #e74c3c; } .position-JUNGLE { background-color: #27ae60; } .position-MID { background-color: #f1c40f; } .position-ADC { background-color: #e67e22; } .position-SUPPORT { background-color: #3498db; } .position-ALL { background-color: #8e44ad; }
+        .player-tier { background-color: #f2f2f2; color: #333; }
+        .player-stats { font-size: 0.85em; color: #555; margin-top: 5px; }
+        .edit-form-container { display: none; margin-top: 20px; padding: 20px; background-color: #f9f9f9; border-radius: 8px; }
+        .player-table th.sub-position-header, .player-table td.sub-position-cell { /* 부포지션 컬럼 스타일 */ }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>플레이어 관리</h1>
+        <div class="player-management">
+            <h2>등록된 플레이어 목록</h2>
+            <button id="showAddPlayerForm" class="btn">새 플레이어 등록</button>
+
+            <div id="addPlayerForm" class="edit-form-container">
+                <h3>새 플레이어 등록</h3>
+                <form id="playerForm">
+                    <div class="form-group"><label for="nickname">닉네임:</label><input type="text" id="nickname" name="nickname" required></div>
+                    <div class="form-group">
+                        <label for="tier">최고 티어:</label>
+                        <select id="tier" name="tier" required onchange="updateDivisionOptions('tier', 'divisionGroup', 'lpGroup', 'division', 'division-score')">
+                            <option value="IRON">아이언</option><option value="BRONZE">브론즈</option><option value="SILVER" selected>실버</option><option value="GOLD">골드</option><option value="PLATINUM">플래티넘</option><option value="EMERALD">에메랄드</option><option value="DIAMOND">다이아몬드</option><option value="MASTER">마스터</option><option value="GRANDMASTER">그랜드마스터</option><option value="CHALLENGER">챌린저</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="divisionGroup">
+                        <label for="division">디비전:</label>
+                        <select id="division" name="division_select">
+                            <option value="4">IV</option><option value="3">III</option><option value="2">II</option><option value="1">I</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="lpGroup" style="display:none;">
+                        <label for="division-score">점수(LP):</label>
+                        <input type="number" id="division-score" name="division_input" min="0" value="0">
+                        <small>마스터 이상 티어의 경우 점수를, 그 외 티어는 LP(0~99)를 입력.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="position">주 포지션:</label>
+                        <select id="position" name="position" required onchange="handleMainPositionChange(this, 'sub_position')">
+                            {% for pos_enum in Position %}
+                            <option value="{{ pos_enum.value }}">{{ pos_enum.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sub_position">부 포지션 (선택):</label>
+                        <select id="sub_position" name="sub_position">
+                            <option value="">선택 안함</option>
+                            {% for pos_enum in Position %}
+                            <option value="{{ pos_enum.value }}" class="sub-position-option sub-position-{{pos_enum.value}}">{{ pos_enum.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">저장</button>
+                    <button type="button" id="cancelAddPlayer" class="btn btn-danger">취소</button>
+                </form>
+            </div>
+
+            <div id="editPlayerForm" class="edit-form-container">
+                <h3>플레이어 정보 수정</h3>
+                <form id="editForm">
+                    <input type="hidden" id="edit_player_id" name="player_id">
+                    <div class="form-group"><label for="edit_nickname">닉네임:</label><input type="text" id="edit_nickname" name="nickname" required></div>
+                    <div class="form-group">
+                        <label for="edit_tier">최고 티어:</label>
+                        <select id="edit_tier" name="tier" required onchange="updateDivisionOptions('edit_tier', 'edit_divisionGroup', 'edit_lpGroup', 'edit_division', 'edit_division-score')">
+                            <option value="IRON">아이언</option><option value="BRONZE">브론즈</option><option value="SILVER">실버</option><option value="GOLD">골드</option><option value="PLATINUM">플래티넘</option><option value="EMERALD">에메랄드</option><option value="DIAMOND">다이아몬드</option><option value="MASTER">마스터</option><option value="GRANDMASTER">그랜드마스터</option><option value="CHALLENGER">챌린저</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="edit_divisionGroup">
+                        <label for="edit_division">디비전:</label>
+                        <select id="edit_division" name="division_select">
+                            <option value="4">IV</option><option value="3">III</option><option value="2">II</option><option value="1">I</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="edit_lpGroup" style="display:none;">
+                        <label for="edit_division-score">점수(LP):</label>
+                        <input type="number" id="edit_division-score" name="division_input" min="0" value="0">
+                        <small>마스터 이상 티어의 경우 점수를, 그 외 티어는 LP(0~99)를 입력.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_position">주 포지션:</label>
+                        <select id="edit_position" name="position" required onchange="handleMainPositionChange(this, 'edit_sub_position')">
+                             {% for pos_enum in Position %}
+                            <option value="{{ pos_enum.value }}">{{ pos_enum.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                     <div class="form-group">
+                        <label for="edit_sub_position">부 포지션 (선택):</label>
+                        <select id="edit_sub_position" name="sub_position">
+                            <option value="">선택 안함</option>
+                             {% for pos_enum in Position %}
+                            <option value="{{ pos_enum.value }}" class="sub-position-option sub-position-{{pos_enum.value}}">{{ pos_enum.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">저장</button>
+                    <button type="button" id="cancelEditPlayer" class="btn btn-danger">취소</button>
+                </form>
+            </div>
+
+            <table class="player-table">
+                <thead><tr><th>닉네임</th><th>주 포지션</th><th class="sub-position-header">부 포지션</th><th>최고 티어</th><th>매칭 점수</th><th>전적</th><th>등록일</th><th>작업</th></tr></thead>
+                <tbody>
+                    {% for player in players %}
+                        <tr data-player-id="{{ player.id }}"
+                            data-nickname="{{ player.nickname }}"
+                            data-tier="{{ player.tier.value }}"
+                            data-division="{{ player.division }}"
+                            data-lp="{{ player.lp }}"
+                            data-position="{{ player.position.value }}"
+                            data-sub-position="{{ player.sub_position.value if player.sub_position else '' }}">
+                            <td>{{ player.nickname }}</td>
+                            <td><span class="player-position position-{{ player.position.value }}">{{ player.position.value }}</span></td>
+                            <td class="sub-position-cell">
+                                {% if player.sub_position %}
+                                <span class="player-position position-{{ player.sub_position.value }}">{{ player.sub_position.value }}</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="player-tier">
+                                    {{ player.tier.value }}
+                                    {% if player.tier.value not in ['MASTER', 'GRANDMASTER', 'CHALLENGER'] %}
+                                        {% if player.division == 1 %}I{% elif player.division == 2 %}II{% elif player.division == 3 %}III{% elif player.division == 4 %}IV{% endif %} ({{player.lp}}LP)
+                                    {% else %}
+                                        {{ player.division }} 점수
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>{{ "%.1f"|format(player.match_score) }}</td>
+                            <td>{{ player.win_count }}승 {{ player.lose_count }}패</td>
+                            <td>{{ player.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td class="player-actions">
+                                <button class="edit-btn" data-player-id="{{ player.id }}">수정</button>
+                                <button class="delete-btn" data-player-id="{{ player.id }}">삭제</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="actions"><a href="/" class="btn">메인으로 돌아가기</a></div>
+    </div>
+    <script>
+        function updateDivisionOptions(tierElementId, divisionGroupElementId, lpGroupElementId, divisionSelectId, divisionInputId) {
+            const tierSelect = document.getElementById(tierElementId);
+            const divisionGroup = document.getElementById(divisionGroupElementId);
+            const lpGroup = document.getElementById(lpGroupElementId);
+            const divisionSelect = document.getElementById(divisionSelectId);
+            const divisionInput = document.getElementById(divisionInputId);
+
+            const isMasterPlus = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tierSelect.value);
+
+            divisionGroup.style.display = isMasterPlus ? 'none' : 'block';
+            lpGroup.style.display = 'block';
+
+            const lpLabel = lpGroup.querySelector('label');
+            if (isMasterPlus) {
+                lpLabel.textContent = '점수:';
+                divisionInput.min = "0";
+            } else {
+                lpLabel.textContent = 'LP:';
+                divisionInput.min = "0";
+                // divisionInput.max = "99"; // LP는 0-99 (필요시 활성화)
+            }
+
+            if (isMasterPlus) {
+                divisionSelect.disabled = true;
+                divisionInput.disabled = false;
+                divisionInput.name = "division_input";
+                divisionSelect.name = "division_select_disabled";
+            } else {
+                divisionSelect.disabled = false;
+                divisionInput.disabled = false;
+                divisionSelect.name = "division_select";
+            }
+        }
+
+        function handleMainPositionChange(mainPositionSelect, subPositionSelectId) {
+            const subPositionSelect = document.getElementById(subPositionSelectId);
+            const mainPositionValue = mainPositionSelect.value;
+
+            if (mainPositionValue === "ALL") {
+                subPositionSelect.value = "";
+                subPositionSelect.disabled = true;
+                Array.from(subPositionSelect.options).forEach(opt => {
+                    opt.style.display = "";
+                });
+            } else {
+                subPositionSelect.disabled = false;
+                const allOption = subPositionSelect.querySelector('option[value="ALL"]');
+                if (allOption) {
+                    allOption.style.display = "none";
+                }
+                Array.from(subPositionSelect.options).forEach(opt => {
+                    if (opt.value !== "ALL") {
+                        opt.style.display = "";
+                    }
+                });
+
+                if (subPositionSelect.value === "ALL") {
+                    subPositionSelect.value = "";
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const showAddPlayerForm = document.getElementById('showAddPlayerForm');
+            const addPlayerFormDiv = document.getElementById('addPlayerForm');
+            const cancelAddPlayer = document.getElementById('cancelAddPlayer');
+            const editPlayerFormDiv = document.getElementById('editPlayerForm');
+            const cancelEditPlayer = document.getElementById('cancelEditPlayer');
+
+            handleMainPositionChange(document.getElementById('position'), 'sub_position');
+
+            updateDivisionOptions('tier', 'divisionGroup', 'lpGroup', 'division', 'division-score');
+            updateDivisionOptions('edit_tier', 'edit_divisionGroup', 'edit_lpGroup', 'edit_division', 'edit_division-score');
+
+            showAddPlayerForm.addEventListener('click', () => {
+                addPlayerFormDiv.style.display = 'block'; editPlayerFormDiv.style.display = 'none'; showAddPlayerForm.style.display = 'none';
+                document.getElementById('playerForm').reset();
+                updateDivisionOptions('tier', 'divisionGroup', 'lpGroup', 'division', 'division-score');
+                handleMainPositionChange(document.getElementById('position'), 'sub_position');
+            });
+            cancelAddPlayer.addEventListener('click', () => {
+                addPlayerFormDiv.style.display = 'none'; showAddPlayerForm.style.display = 'block';
+            });
+            cancelEditPlayer.addEventListener('click', () => {
+                editPlayerFormDiv.style.display = 'none'; showAddPlayerForm.style.display = 'block';
+            });
+
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const playerRow = this.closest('tr');
+                    const playerId = playerRow.dataset.playerId;
+
+                    document.getElementById('edit_player_id').value = playerId;
+                    document.getElementById('edit_nickname').value = playerRow.dataset.nickname;
+                    document.getElementById('edit_tier').value = playerRow.dataset.tier;
+
+                    updateDivisionOptions('edit_tier', 'edit_divisionGroup', 'edit_lpGroup', 'edit_division', 'edit_division-score');
+
+                    const tierValue = playerRow.dataset.tier;
+                    const divisionValue = playerRow.dataset.division;
+                    const lpValue = playerRow.dataset.lp;
+
+                    if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tierValue)) {
+                        document.getElementById('edit_division-score').value = divisionValue;
+                    } else {
+                        document.getElementById('edit_division').value = divisionValue;
+                        document.getElementById('edit_division-score').value = lpValue;
+                    }
+
+                    const mainPos = playerRow.dataset.position;
+                    document.getElementById('edit_position').value = mainPos;
+                    handleMainPositionChange(document.getElementById('edit_position'), 'edit_sub_position');
+                    document.getElementById('edit_sub_position').value = playerRow.dataset.subPosition || "";
+
+                    editPlayerFormDiv.style.display = 'block'; addPlayerFormDiv.style.display = 'none'; showAddPlayerForm.style.display = 'none';
+                });
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', async function() {
+                    if (confirm('정말로 이 플레이어를 삭제하시겠습니까?')) {
+                        const playerId = this.dataset.playerId;
+                        try {
+                            const response = await fetch(`/players/${playerId}`, {
+                                method: 'DELETE', credentials: 'same-origin' });
+                            if (response.ok) {
+                                document.querySelector(`tr[data-player-id="${playerId}"]`).remove();
+                                alert('플레이어가 삭제되었습니다.');
+                            } else {
+                                const error = await response.json().catch(()=>({detail:"삭제 오류"}));
+                                alert(error.detail || '플레이어 삭제 중 오류.');
+                            }
+                        } catch (err) { alert('서버 연결 오류.'); console.error(err); }
+                    }
+                });
+            });
+
+            async function handlePlayerFormSubmit(formId, url, method, successMessage) {
+                const form = document.getElementById(formId);
+                const tier = form.querySelector('[name="tier"]').value;
+                const isMasterPlus = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier);
+
+                let divisionPayload;
+                let lpPayload = 0;
+
+                if (isMasterPlus) {
+                    divisionPayload = parseInt(form.querySelector('[name="division_input"]').value);
+                } else {
+                    divisionPayload = parseInt(form.querySelector('[name="division_select"]').value);
+                    lpPayload = parseInt(form.querySelector('[name="division_input"]').value);
+                }
+
+                const subPositionSelect = form.querySelector('[name="sub_position"]');
+                let subPositionValue = subPositionSelect.value;
+                if (form.querySelector('[name="position"]').value === "ALL") {
+                    subPositionValue = null;
+                }
+
+                const formData = {
+                    nickname: form.querySelector('[name="nickname"]').value,
+                    tier: tier,
+                    division: divisionPayload,
+                    position: form.querySelector('[name="position"]').value,
+                    sub_position: subPositionValue === "" ? null : subPositionValue,
+                    lp: lpPayload
+                };
+
+                try {
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(formData),
+                        credentials: 'same-origin'
+                    });
+                    const responseData = await response.json();
+                    if (response.ok) {
+                        alert(successMessage); window.location.reload();
+                    } else {
+                        alert(responseData.detail || '오류가 발생했습니다.');
+                    }
+                } catch (err) { alert('서버 연결 오류 또는 응답 처리 오류.'); console.error(err); }
+            }
+
+            document.getElementById('playerForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                handlePlayerFormSubmit('playerForm', `/players/`, 'POST', '플레이어가 등록되었습니다!');
+            });
+            document.getElementById('editForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const playerId = document.getElementById('edit_player_id').value;
+                handlePlayerFormSubmit('editForm', `/players/${playerId}`, 'PUT', '플레이어 정보가 수정되었습니다!');
+            });
+        });
+    </script>
+</body>
+</html>

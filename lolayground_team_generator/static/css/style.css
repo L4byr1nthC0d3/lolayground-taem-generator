@@ -1,0 +1,335 @@
+/* static/css/style.css - 확장된 스타일 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 900px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+h2 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+h3 {
+    color: #34495e;
+    margin-bottom: 8px;
+    font-size: 1.1rem;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn {
+    display: inline-block;
+    background-color: #3498db;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.btn:hover {
+    background-color: #2980b9;
+}
+
+.btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: #2ecc71;
+}
+
+.btn-primary:hover {
+    background-color: #27ae60;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+.auth-form {
+    margin-top: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 20px;
+    color: #7f8c8d;
+}
+
+.form-footer a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.form-footer a:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.success-message {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.dashboard-content {
+    margin: 20px 0;
+    line-height: 1.8;
+}
+
+.dashboard-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dashboard-actions .btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+}
+
+.welcome-message {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.welcome-message p {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+}
+
+.profile-image {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.profile-img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #3498db;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.profile-header .profile-img {
+    width: 80px;
+    height: 80px;
+}
+
+.profile-details {
+    margin-left: 20px;
+}
+
+.profile-details h2 {
+    margin-bottom: 5px;
+}
+
+.profile-details p {
+    color: #7f8c8d;
+    margin-bottom: 5px;
+}
+
+.bio-section {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+}
+
+.user-info {
+    margin-bottom: 30px;
+}
+
+.actions {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.no-data {
+    text-align: center;
+    color: #7f8c8d;
+    padding: 20px;
+    font-style: italic;
+}
+
+.clan-card {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.clan-card h3 {
+    margin-top: 0;
+}
+
+.clan-card .created-at {
+    font-size: 0.8em;
+    color: #7f8c8d;
+    margin: 5px 0;
+}
+
+.clan-cards {
+    margin-top: 20px;
+}
+
+.clan-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.create-clan {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.create-clan-form {
+    margin-top: 20px;
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        width: 95%;
+        margin: 20px auto;
+    }
+
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .profile-details {
+        margin-left: 0;
+        margin-top: 15px;
+    }
+
+    .dashboard-actions,
+    .profile-actions {
+        flex-direction: column;
+    }
+
+    .dashboard-actions .btn,
+    .profile-actions .btn {
+        margin-bottom: 10px;
+    }
+
+    .player-card {
+        width: 100%;
+    }
+
+    .clan-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .position-ALL {
+        background-color: #8e44ad;
+    }
+}

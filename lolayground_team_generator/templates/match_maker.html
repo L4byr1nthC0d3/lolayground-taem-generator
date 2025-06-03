@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>팀 매칭 및 결과 기록</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        .player-selection { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .player-card { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 10px; width: calc(20% - 10px); min-width: 150px; cursor: pointer; transition: background-color 0.3s; }
+        .player-card:hover { background-color: #eee; }
+        .player-card.selected { background-color: #d4edda; border-color: #c3e6cb; }
+        .player-card .tier { font-weight: bold; color: #2c3e50; }
+        .player-card .position { display: inline-block; padding: 2px 5px; background-color: #3498db; color: white; border-radius: 3px; margin-top: 5px; font-size: 0.8em; }
+        .player-card .match-score, .player-card .record { font-size: 0.85em; color: #555; margin-top: 3px; }
+        .position.TOP { background-color: #e74c3c; } .position.JUNGLE { background-color: #27ae60; } .position.MID { background-color: #f1c40f; } .position.ADC { background-color: #e67e22; } .position.SUPPORT { background-color: #3498db; } .position.ALL { background-color: #8e44ad; }
+        .selected-counter { margin: 20px 0; font-weight: bold; }
+
+        .recent-matches-section { margin-top: 40px; }
+        .recent-matches-section h2 { margin-bottom: 15px; }
+        .match-item-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .match-item-link:hover .match-item {
+            background-color: #e9ecef;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .match-item {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .match-date { font-size: 0.9em; color: #666; margin-bottom: 8px; }
+        .match-details { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .match-teams-summary { flex-grow: 1; min-width: 200px; font-size: 0.95em; line-height: 1.4; }
+        .match-winner-summary { font-weight: bold; color: #27ae60; }
+        .match-pending-summary { color: #e67e22; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>팀 매칭 생성</h1>
+
+        <div class="match-maker">
+            <h2>플레이어 선택</h2>
+            <p class="subtitle">10명의 플레이어를 선택하세요</p>
+            <div class="selected-counter">선택된 플레이어: <span id="selectedCount">0</span>/10</div>
+            <div class="player-selection" id="playerSelection">
+                {% for player in players %}
+                    <div class="player-card" data-id="{{ player.id }}">
+                        <h3>{{ player.nickname }}</h3>
+                        <div class="tier">
+                            {{ player.tier.value }}
+                            {% if player.tier.value not in ['MASTER', 'GRANDMASTER', 'CHALLENGER'] %}
+                                {% if player.division == 1 %}I{% elif player.division == 2 %}II{% elif player.division == 3 %}III{% elif player.division == 4 %}IV{% endif %}
+                                ({{player.lp}}LP)
+                            {% else %}
+                                {{ player.division }} 점수
+                            {% endif %}
+                        </div>
+                        <div class="position {{ player.position.value }}">{{ player.position.value }}</div>
+                        {% if player.sub_position %}
+                            <div class="position {{ player.sub_position.value }}" style="background-color: #7f8c8d;">(부) {{ player.sub_position.value }}</div>
+                        {% endif %}
+                        <div class="match-score">매칭 점수: {{ "%.1f"|format(player.match_score) }}</div>
+                        <div class="record">전적: {{ player.win_count }}승 {{ player.lose_count }}패</div>
+                    </div>
+                {% endfor %}
+                 {% if not players %}
+                    <p>등록된 플레이어가 없습니다. <a href="{{url_for('player_management_page')}}">플레이어 관리</a> 페이지에서 먼저 플레이어를 등록해주세요.</p>
+                {% elif players|length < 10 %}
+                     <p>팀 매칭을 위해서는 최소 10명의 플레이어가 등록되어 있어야 합니다. 현재 {{ players|length }}명 등록됨.</p>
+                {% endif %}
+            </div>
+            <button id="createMatchBtn" class="btn btn-primary" {% if not players or players|length < 10 %}disabled{% endif %}>팀 매칭 시작 및 상세 보기</button>
+        </div>
+
+        <div class="recent-matches-section">
+            <h2>최근 매치 목록 (클릭 시 상세 및 결과 입력)</h2>
+            <div id="recentMatchesList">
+                {% if recent_matches %}
+                    {% for match in recent_matches %}
+                    <a href="{{ url_for('match_detail_page', match_id=match.id) }}" class="match-item-link">
+                        <div class="match-item">
+                            <div class="match-date">{{ match.match_date.strftime('%Y-%m-%d %H:%M') }}</div>
+                            <div class="match-details">
+                                <div class="match-teams-summary">
+                                    블루 (티어 {{ "%.1f"|format(match.blue_team_avg_score) }}, 매칭 {{ "%.1f"|format(match.blue_team_match_score) }}) vs
+                                    레드 (티어 {{ "%.1f"|format(match.red_team_avg_score) }}, 매칭 {{ "%.1f"|format(match.red_team_match_score) }})
+                                    <br>밸런스: {{ "%.1f"|format(match.balance_score) }}
+                                </div>
+                                {% if match.is_completed %}
+                                <span class="match-winner-summary">승리: {{ "블루팀" if match.winner == "BLUE" else "레드팀" }}</span>
+                                {% else %}
+                                <span class="match-pending-summary">결과 대기중</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <p>진행된 매치가 없습니다.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="{{ url_for('home') }}" class="btn">메인으로 돌아가기</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const playerCards = document.querySelectorAll('.player-card');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const createMatchBtn = document.getElementById('createMatchBtn');
+
+            let selectedPlayers = [];
+
+            if (playerCards.length < 10 && createMatchBtn) {
+                 createMatchBtn.title = "플레이어가 10명 이상이어야 매칭 가능합니다.";
+            }
+
+            playerCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const playerId = parseInt(this.dataset.id);
+                    if (this.classList.contains('selected')) {
+                        this.classList.remove('selected');
+                        selectedPlayers = selectedPlayers.filter(id => id !== playerId);
+                    } else {
+                        if (selectedPlayers.length >= 10) {
+                            alert('최대 10명까지만 선택할 수 있습니다.'); return;
+                        }
+                        this.classList.add('selected');
+                        selectedPlayers.push(playerId);
+                    }
+                    selectedCountSpan.textContent = selectedPlayers.length;
+                    if (createMatchBtn) {
+                        createMatchBtn.disabled = selectedPlayers.length !== 10;
+                    }
+                });
+            });
+
+            if(createMatchBtn){
+                createMatchBtn.addEventListener('click', async function() {
+                    this.disabled = true;
+                    this.textContent = "매칭 중...";
+                    try {
+                        const payload = { player_ids: selectedPlayers }; // embed=True이므로 객체로 감싸서 전송
+
+                        const response = await fetch(`{{ url_for('create_match_api') }}`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(payload),
+                            credentials: 'same-origin'
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => {
+                                return { detail: `서버 오류: ${response.status} ${response.statusText}. 응답이 JSON 형식이 아닙니다.` };
+                            });
+                            throw new Error(errorData.detail || `팀 매칭 중 오류 발생 (상태 코드: ${response.status})`);
+                        }
+
+                        const matchData = await response.json();
+                        window.location.href = `{{ url_for('match_detail_page', match_id=0) }}`.replace('/0', '/' + matchData.id);
+
+                    } catch (error) {
+                        console.error("팀 매칭 API 호출 오류:", error); // 콘솔에는 전체 Error 객체 로깅
+                        alert(error.message || '팀 매칭 중 알 수 없는 오류가 발생했습니다.'); // 사용자에게는 error.message 표시
+                        this.disabled = false;
+                        this.textContent = "팀 매칭 시작 및 상세 보기";
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

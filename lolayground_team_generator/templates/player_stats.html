@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>플레이어 통계</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        .stats-header { margin-bottom: 20px; }
+        .stats-table-container { overflow-x: auto; margin-bottom: 20px; }
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .stats-table th, .stats-table td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
+        .stats-table th { background-color: #f2f2f2; font-weight: bold; }
+        .stats-table tr:hover { background-color: #f5f5f5; }
+        .player-position, .player-tier { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; color: black; font-weight: bold; }
+        .position-TOP { background-color: #C0392B; color: white; } .position-JUNGLE { background-color: #27AE60; color: black; } .position-MID { background-color: #2980B9; color: white; } .position-ADC { background-color: #F1C40F; color: black; } .position-SUPPORT { background-color: #5DADE2; color: black; } .position-ALL { background-color: #8E44AD; color: white; }
+        .tier-IRON { background-color: #3b3b3b; color: white; } .tier-BRONZE { background-color: #C4A15B; } .tier-SILVER { background-color: #cfcfcf; } .tier-GOLD { background-color: #EDDC91; } .tier-PLATINUM { background-color: #e5e4e2; } .tier-EMERALD { background-color: #66aa79; } .tier-DIAMOND { background-color: #548CB4; } .tier-MASTER { background-color: #807fff; color: white; } .tier-GRANDMASTER { background-color: #ff7f7e; } .tier-CHALLENGER { background: linear-gradient(135deg, #EDDC91 50%, #548CB4 50%); }
+        .delete-form { display: inline; }
+        .delete-btn { background: none; border: none; cursor: pointer; color: #e74c3c; padding: 3px 5px; }
+        .delete-btn:hover { text-decoration: underline; }
+        .message-container { padding: 10px; margin: 15px 0; border-radius: 4px; }
+        .message-container.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .message-container.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .no-data { text-align: center; padding: 40px 0; color: #7f8c8d; font-style: italic; }
+        .sort-header { cursor: pointer; } .sort-header a { color: inherit; text-decoration: none; display: block; position: relative; } .sort-header a:hover { text-decoration: underline; } .sort-indicator { margin-left: 5px; display: inline-block; font-size: 0.8em; }
+        .col-record { min-width: 150px; } .winrate { font-weight: bold; }
+        @media (max-width: 768px) { .stats-table th, .stats-table td { padding: 8px 5px; font-size: 0.9em; } .player-position { padding: 3px 5px; font-size: 0.7em; } }
+        @media (max-width: 576px) { .container { padding: 10px; } .stats-table th:nth-child(5), .stats-table td:nth-child(5) { display: none; } }
+        .stats-table th.sub-position-header, .stats-table td.sub-position-cell { /* 부포지션 컬럼 스타일 */ }
+        .stats-table th:last-child, .stats-table td:last-child { /* 마지막 '삭제' 컬럼 숨기기 또는 제거 */
+             /* display: none; /* 컬럼을 완전히 숨기고 싶다면 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="stats-header"><h1>플레이어 통계</h1></div>
+        {% if request.query_params.get('error') %}<div class="message-container error">{{ request.query_params.get('error') }}</div>{% endif %}
+        {% if request.query_params.get('success') %}<div class="message-container success">{{ request.query_params.get('success') }}</div>{% endif %}
+        <div class="stats-table-container">
+            {% if player_stats %}
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>순위</th><th>닉네임</th><th>주 포지션</th><th class="sub-position-header">부 포지션</th><th>티어</th>
+                        <th class="sort-header"><a href="{{ url_for('player_stats_page') }}?sort_by=match_score&order={{ 'desc' if sort_by != 'match_score' or order == 'asc' else 'asc' }}">매칭 점수{% if sort_by == 'match_score' %}<span class="sort-indicator">{{ '▼' if order == 'desc' else '▲' }}</span>{% endif %}</a></th>
+                        <th class="sort-header col-record"><a href="{{ url_for('player_stats_page') }}?sort_by=total_games&order={{ 'desc' if sort_by != 'total_games' or order == 'asc' else 'asc' }}">전적{% if sort_by == 'total_games' %}<span class="sort-indicator">{{ '▼' if order == 'desc' else '▲' }}</span>{% endif %}</a></th>
+                        <th class="sort-header"><a href="{{ url_for('player_stats_page') }}?sort_by=win_rate&order={{ 'desc' if sort_by != 'win_rate' or order == 'asc' else 'asc' }}">승률{% if sort_by == 'win_rate' %}<span class="sort-indicator">{{ '▼' if order == 'desc' else '▲' }}</span>{% endif %}</a></th>
+                        <!-- 삭제 컬럼 헤더 제거 -->
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in player_stats %}
+                    <tr>
+                        <td>{{ loop.index }}</td><td>{{ stat.player.nickname }}</td>
+                        <td><span class="player-position position-{{ stat.clean_position }}">{{ stat.clean_position }}</span></td>
+                        <td class="sub-position-cell">
+                            {% if stat.clean_sub_position != "없음" %}
+                            <span class="player-position position-{{ stat.clean_sub_position }}">{{ stat.clean_sub_position }}</span>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="player-tier tier-{{ stat.clean_tier }}">
+                                {{ stat.clean_tier }}
+                                {% if stat.clean_tier not in ['MASTER', 'GRANDMASTER', 'CHALLENGER'] %}
+                                    {% if stat.player.division == 1 %}I{% elif stat.player.division == 2 %}II{% elif stat.player.division == 3 %}III{% elif stat.player.division == 4 %}IV{% endif %} ({{stat.player.lp}}LP)
+                                {% else %}{{ stat.player.division }} 점수{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ "%.1f"|format(stat.player.match_score) }}</td>
+                        <td class="col-record">{{ stat.total_games }}게임 ({{ stat.player.win_count }}승 {{ stat.player.lose_count }}패)</td>
+                        <td><span class="winrate">{{ "%.1f"|format(stat.win_rate) }}%</span></td>
+                        <!-- 삭제 버튼/폼 제거 -->
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}<div class="no-data"><p>등록된 플레이어가 없습니다. <a href="{{url_for('player_management_page')}}">플레이어 관리</a>에서 등록해주세요.</p></div>{% endif %}
+        </div>
+        <div class="actions">
+            <a href="{{ url_for('home') }}" class="btn">메인으로 돌아가기</a>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sortLinks = document.querySelectorAll('.sort-header a');
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorMsg = urlParams.get('error');
+            const successMsg = urlParams.get('success');
+            sortLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                try {
+                    const url = new URL(href, window.location.origin);
+                    const params = new URLSearchParams(url.search);
+                    if (errorMsg) params.set('error', errorMsg);
+                    if (successMsg) params.set('success', successMsg);
+                    url.search = params.toString();
+                    link.setAttribute('href', url.pathname + url.search);
+                } catch(e) {
+                    let newHref = href;
+                    const queryChar = newHref.includes('?') ? '&' : '?';
+                    if (errorMsg) newHref += `${queryChar}error=${encodeURIComponent(errorMsg)}`;
+                    if (successMsg) newHref += `${newHref.includes('?') ? '&' : '?'}success=${encodeURIComponent(successMsg)}`;
+                    link.setAttribute('href', newHref);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
